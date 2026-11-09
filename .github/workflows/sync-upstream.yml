@@ -1,0 +1,45 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # Runs at 03:37 UTC on the 10th of every month (randomized between 1 AM and 5 AM)
+    - cron: '37 3 10 * *'
+  # Allow manual trigger from the GitHub Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync with Upstream
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote and fetch
+        run: |
+          git remote add upstream https://github.com/EL4CTEO/blender-skills.git
+          git fetch upstream main
+
+      - name: Merge upstream into main
+        run: |
+          git checkout main
+          if git merge-base --is-ancestor upstream/main main; then
+            echo "Fork is already up to date with upstream."
+          else
+            echo "Merging upstream changes..."
+            git merge upstream/main --no-edit -m "chore: sync upstream changes"
+            git push origin main
+            echo "Successfully synced and pushed to origin/main."
+          fi
